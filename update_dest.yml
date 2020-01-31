@@ -1,0 +1,59 @@
+---
+- name: Add Logging Destination
+  hosts: switches
+  gather_facts: no
+  connection: local
+  debugger: on_failed
+  
+  vars_prompt:
+  - name: "mgmt_username"
+    prompt: "Username"
+    private: no
+  - name: "mgmt_password"
+    prompt: "Password"
+  
+  tasks:
+  
+    - name: define provider
+      set_fact:
+        provider:
+            host: "{{ inventory_hostname }}"
+            username: "{{ mgmt_username }}"
+            password: "{{ mgmt_password }}"
+            
+    - name: show before log configuration
+      ios_command:
+        provider: "{{ provider }}"
+        commands: show run | i logging host
+      register: before_logs
+    
+    - name: add new logging destination
+      ios_config:
+        provider: "{{ provider }}"
+        lines:
+            - logging host LOGGING_DEST transport udp port DEST_PORT
+    
+    - name: save configuration
+      ios_config:
+        provider: "{{ provider }}"
+        save_when: modified
+        
+    - name: show after log configuration
+      ios_command:
+        provider: "{{ provider }}"
+        commands: show run | i logging host
+      register: after_logs
+    
+#    - name: Insert Before Config To Before Config File
+#      blockinfile:
+#        path: /home/XXX/ansible/update_log_dest/before_log_config
+#        block:
+#            "{{ before_logs.stdout }}"
+#        marker: "# {{inventory_hostname}} before log config"
+        
+#    - name: Insert After Config To After Config File
+#      blockinfile:
+#        path: /home/XXX/ansible/update_log_dest/after_log_config
+#        block:
+#            "{{ after_logs.stdout }}"
+#        marker: "# {{inventory_hostname}} after log config"
